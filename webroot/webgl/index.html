@@ -1,0 +1,249 @@
+<html>
+<head>
+</head>
+<body>
+
+<div style="display: flex;">
+<div>
+  <h1>VIDEO</h1>
+  <video id="v" controls src="src/mp4_h264_aac.mp4"></video>
+</div>
+
+<div>
+  <h1>CANVAS 2D</h1>
+  <canvas id="c"></canvas>
+  <script>
+  (function() {
+    var runStatus = false;
+    var c = document.getElementById('c');
+    var v = document.getElementById('v');
+    var ctx = c.getContext('2d');
+    
+    var render = function() {
+      ctx.drawImage(v, 0, 0);
+    
+      var imgdata = ctx.getImageData(0, 0, v.videoWidth, v.videoHeight);
+      for (var i = 0; i < imgdata.data.length; i = i + 4) {
+          var gray = (imgdata.data[i] + imgdata.data[i + 1] + imgdata.data[i + 2]) / 3;// グレースケール値計算
+          imgdata.data[i]     = gray;// R
+          imgdata.data[i + 1] = gray;// G
+          imgdata.data[i + 2] = gray;// B
+          imgdata.data[i + 3] = 255;// alpha
+      }
+      ctx.putImageData(imgdata, 0, 0); 
+    };
+    var animationLoop = function(){
+      if (!runStatus) {
+        return;
+      }
+      render();
+      requestAnimationFrame(animationLoop);
+    };
+    
+    v.addEventListener('play', function(e) {
+      runStatus = true;
+      animationLoop();
+    }, false);
+    v.addEventListener('pause', function(e) {
+      runStatus = false;
+    }, false);
+    v.addEventListener('canplay', function(e) {
+      c.width  = v.videoWidth;
+      c.height = v.videoHeight;
+      render();
+    }, false);
+  })();
+  </script>
+</div>
+
+<div>
+  <h1>CANVAS WEBGL</h1>
+  <canvas id="cc"></canvas>
+  <script id="default-vs" type="x-shader/x-vertex">
+    attribute vec2 vertex;
+    attribute vec2 texCoord;
+    varying vec2 vTexCoord;
+    void main(void) {
+      gl_Position = vec4(vertex, 0.0, 1.0);
+      vTexCoord = texCoord;
+    }
+  </script>
+  <script id="default-fs" type="x-shader/x-fragment">
+    varying vec2 vTexCoord;
+    uniform sampler2D texture;
+    void main(void) {
+      gl_FragColor = texture2D(texture, vTexCoord);
+    }
+  </script>
+  <script>
+  (function() {
+    var c = document.getElementById('cc');
+    var v = document.getElementById('v');
+    var gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);// canvasを初期化する色を設定する
+    gl.clearDepth(1.0);// canvasを初期化する際の深度を設定する
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);// canvasを初期化
+  
+    v.addEventListener('play', function(e) {
+      runStatus = true;
+      animationLoop();
+    }, false);
+    v.addEventListener('pause', function(e) {
+      runStatus = false;
+    }, false);
+    v.addEventListener('canplay', function(e) {
+      c.width  = v.videoWidth;
+      c.height = v.videoHeight;
+    }, false);
+  
+    var initBuffers = function() {
+      vertexBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
+      texCoordBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 1,1, 0,1]), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    };
+    var createShader = function(id) {
+      var shader;
+      var script = document.getElementById(id);
+      if (!script) {
+        return;
+      }
+      var src =
+        "#ifdef GL_ES\n" +
+        "precision highp float;\n" +
+        "precision highp int;\n" +
+        "#endif\n";
+      for (var child = script.firstChild; child; child = child.nextSibling) {
+        if (child.nodeType == 3) src += child.textContent;
+      }
+      switch(script.type){// 属性チェック
+        case 'x-shader/x-vertex':// 頂点シェーダの場合
+          shader = gl.createShader(gl.VERTEX_SHADER);
+          break;
+        case 'x-shader/x-fragment':// フラグメントシェーダの場合
+          shader = gl.createShader(gl.FRAGMENT_SHADER);
+          break;
+        default:
+          return;
+      }
+      //gl.shaderSource(shader, script.text);// ソース適用
+      gl.shaderSource(shader, src);// ソース適用
+      gl.compileShader(shader);// コンパイル
+      // シェーダーのチェック
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        alert("An error occurred compiling the shaders: " + gl.getShaderInfoLog(shader));
+        return false;
+      }
+      return shader;
+    };
+  
+    var createProgram = function(vs, fs) {
+      // プログラムオブジェクトの生成
+      var program = gl.createProgram();
+      // プログラムオブジェクトにシェーダを割り当てる
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      // シェーダをリンク
+      gl.linkProgram(program);
+      
+      // シェーダのリンクが正しく行なわれたかチェック
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        alert("Unable to initialize the shader program.");
+        return false;
+      }
+      // 成功していたらプログラムオブジェクトを有効にする
+      gl.useProgram(program);
+      // プログラムオブジェクトを返して終了
+      return program;
+    };
+  
+    var updateVideoTexture = function(mipmap) {
+      gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, v);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mipmap ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    };
+  
+    var isPowerOfTwo = function(x) {
+      return (x & (x - 1)) == 0;
+    };
+  
+    var render = function() {
+      var mipmap = isPowerOfTwo(v.videoWidth)
+                && isPowerOfTwo(v.videoHeight)
+                && (effect == "polarcoord"
+                 || effect == "twirl"
+                 || effect == "ripple"
+                 || effect == "opticscmpn"
+                 /*|| effect == "tile"*/);
+      updateVideoTexture(mipmap);
+    
+      gl.viewport(0, 0, c.width, c.height);
+    
+      var program = createProgram(createShader("default-vs"), createShader("default-fs"));
+      gl.useProgram(program);
+      var vertexLoc = gl.getAttribLocation(program, "vertex");
+      var texCoordLoc = gl.getAttribLocation(program, "texCoord");
+      var textureLoc = gl.getUniformLocation(program, "texture");
+      var argLoc = gl.getUniformLocation(program, "arg");
+      var sizeLoc = gl.getUniformLocation(program, "size");
+      var timeLoc = gl.getUniformLocation(program, "time");
+      gl.enableVertexAttribArray(vertexLoc);
+      gl.enableVertexAttribArray(texCoordLoc);
+    
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.vertexAttribPointer(vertexLoc, 2, gl.FLOAT, false, 0, 0);
+    
+      gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+      gl.vertexAttribPointer(texCoordLoc, 2, gl.FLOAT, false, 0, 0);
+    
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+      gl.uniform1i(textureLoc, 0);
+      if (argLoc) {
+        gl.uniform1f(argLoc, slider.slider("value")/100);
+      }
+      if (sizeLoc) {
+        gl.uniform2f(sizeLoc, canvas.width, canvas.height);
+      }
+      if (timeLoc) {
+        gl.uniform1f(timeLoc, v.currentTime);
+      }
+    
+      gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+    
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.disableVertexAttribArray(vertexLoc);
+      gl.disableVertexAttribArray(texCoordLoc);
+    };
+  
+    var animationLoop = function(){
+      if (!runStatus) {
+        return;
+      }
+      render();
+      requestAnimationFrame(animationLoop);
+    };
+  
+    initBuffers();
+  
+    videoTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  })();
+  </script>
+</div>
+
+</body>
+</html>
