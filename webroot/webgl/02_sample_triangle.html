@@ -1,0 +1,134 @@
+<html>
+<head>
+</head>
+<body>
+
+<canvas id="c" width="500" height="500"></canvas>
+
+
+<script id="vs" type="x-shader/x-vertex">
+attribute vec3 aVertexPosition;
+void main() {
+  gl_Position = vec4(aVertexPosition, 1.0);
+  gl_PointSize = 5.0;
+}
+</script>
+<script id="fs" type="x-shader/x-fragment">
+precision mediump float;
+void main() {
+  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+</script>
+
+<script>
+var createGLContext = function(canvas) {
+  var names = ["webgl", "experimental-webgl"];
+  var context = null;
+
+  for (var i = 0, l = names.length; i < l; i++) {
+    try {
+      context = canvas.getContext(names[i]);
+    } catch (e) {}
+    if (context) {
+      break;
+    }
+  }
+
+  if (context) {
+    context.viewportWidth = canvas.width;
+    context.viewportHeight = canvas.height;
+  } else {
+    alert('webgl tukaenai yo!');
+  }
+
+  return context;
+};
+
+var loadShader = function(shaderSourceId) {
+  var shader;
+  var script = document.getElementById(shaderSourceId);
+  if (!script) {
+    return;
+  }
+
+  switch(script.type){// 属性チェック
+    case 'x-shader/x-vertex':// 頂点シェーダの場合
+      shader = gl.createShader(gl.VERTEX_SHADER);
+      break;
+    case 'x-shader/x-fragment':// フラグメントシェーダの場合
+      shader = gl.createShader(gl.FRAGMENT_SHADER);
+      break;
+    default:
+      return;
+  }
+
+  gl.shaderSource(shader, script.text);
+  gl.compileShader(shader);
+
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    alert("shader compile sippai!!: " + gl.getShaderInfoLog(shader));
+    gl.deleteShader(shader);
+    return null;
+  }
+  return shader;
+};
+
+var setupShaders = function(vertextShaderId, fragmentShaderId) {
+  var vertextShader = loadShader(vertextShaderId);
+  var fragmentShader = loadShader(fragmentShaderId);
+  shaderProgram = gl.createProgram();
+
+  gl.attachShader(shaderProgram, vertextShader);
+  gl.attachShader(shaderProgram, fragmentShader);
+  gl.linkProgram(shaderProgram);
+
+  if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+    alert("Unable to initialize the shader program.");
+    return false;
+  }
+
+  gl.useProgram(shaderProgram);
+
+  shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+};
+
+var setupBuffers = function() {
+  vertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  var triangleVertices = [
+    0.0,   0.5, 0.5, 
+    -0.5, -0.5, 0.5, 
+    0.5,  -0.5, 0.0
+  ];
+
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices), gl.STATIC_DRAW);
+  vertexBuffer.itemSize = 3;
+  vertexBuffer.numberOfItems = 3;
+};
+
+var render = function() {
+  gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+//gl.frontFace(gl.CCW);
+//gl.enable(gl.CULL_FACE);
+//gl.cullFace(gl.BACK);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+  gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numberOfItems);
+};
+
+
+var c = document.getElementById('c');
+// webglコンテキスト取得
+var gl = createGLContext(c);
+var shaderProgram;
+var vertexBuffer;
+// 
+setupShaders('vs', 'fs');
+setupBuffers();
+gl.clearColor(0.2, 0.0, 0.0, 1.0);
+render();
+</script>
+
+</body>
+</html>
