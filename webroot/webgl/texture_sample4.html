@@ -74,7 +74,7 @@ window.onload = function(){
     // 頂点インデックス
     var index = [
         0, 1, 2,
-        3, 2, 1
+        1, 2, 3
     ];
     
     // vboとiboの生成
@@ -94,7 +94,6 @@ window.onload = function(){
     // テクスチャを生成
     create_texture("img/fctokyo01c.jpg", function(texture) {
     
-        // 恒常ループ
         // canvasを初期化
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clearDepth(1.0);
@@ -246,12 +245,20 @@ window.onload = function(){
         // データのオンロードをトリガーにする
         img.onload = function(){
 
+            var width_ratio = 1;
+            var height_ratio = 1;
+            if (img.width < img.height) {
+                width_ratio = img.width / img.height;
+            } else {
+                height_ratio = img.height / img.width;
+            }
+
             // サイズを調整するよ
             var canvas = document.createElement('canvas');
             canvas.width="256";
             canvas.height="256";
             var ctx = canvas.getContext("2d");
-            ctx.drawImage(document.images[0], 0, 0);
+            ctx.drawImage(document.images[0], (256 - (256 * width_ratio)) / 2, (256 - (256 * height_ratio)) / 2, 256 * width_ratio, 256 * height_ratio);
             var moge = canvas.toDataURL("image/png")
             var img2 = new Image();
             img2.src=moge;
