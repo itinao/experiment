@@ -10,7 +10,6 @@
 attribute vec3 aVertexPosition;
 void main() {
   gl_Position = vec4(aVertexPosition, 1.0);
-  gl_PointSize = 5.0;
 }
 </script>
 <script id="fs" type="x-shader/x-fragment">
@@ -96,8 +95,8 @@ var setupBuffers = function() {
   vertexBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
   var triangleVertices = [
-    0.0,   0.5, 0.5, 
-    -0.5, -0.5, 0.5, 
+    0.0,   0.5, 0.5,
+    -0.5, -0.5, 0.5,
     0.5,  -0.5, 0.0
   ];
 
@@ -108,9 +107,6 @@ var setupBuffers = function() {
 
 var render = function() {
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-//gl.frontFace(gl.CCW);
-//gl.enable(gl.CULL_FACE);
-//gl.cullFace(gl.BACK);
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
@@ -123,7 +119,7 @@ var c = document.getElementById('c');
 var gl = createGLContext(c);
 var shaderProgram;
 var vertexBuffer;
-// 
+//
 setupShaders('vs', 'fs');
 setupBuffers();
 gl.clearColor(0.2, 0.0, 0.0, 1.0);
