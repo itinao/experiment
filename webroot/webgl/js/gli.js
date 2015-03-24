@@ -3,46 +3,49 @@
  */
 var Gli = Class.extend({
     gl: null,
-    c: null,
+    canvas: null,
     prg: null,
+    doc: null,
+    texture: null,
+
     setFunc: null,
     renderFunc: null,
-    doc: null,
 
     init: function(canvas, doc) {
         if (!canvas) {
             return;
         }
-        this.c = canvas;
-        this.doc = doc;
+        this.canvas = canvas;
+        this.doc = doc || document;
         this.createContext();
         var gl = this.gl;
-//        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+        gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         var vShader = this.createShader('vs');
         var fShader = this.createShader('fs');
         this.createProgram(vShader, fShader);
-    },
-    setRenderParam: function() {
-        var gl = this.gl;
-        this.setFunc && this.setFunc();
+
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
+    },
+    setRenderParam: function() {
+        this.setFunc && this.setFunc();
     },
     render: function() {
         var gl = this.gl;
         this.renderFunc && this.renderFunc();
-//        gl.flush();
+        gl.flush();
+        return true;
     },
     createContext: function() {
-        this.gl = this.c.getContext('webgl') || this.c.getContext('experimental-webgl');
+        this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
     },
     createShader: function(id) {
         var gl = this.gl;
         var shader;
 
-//        var scriptElement = document.getElementById(id);
         var scriptElement = this.doc.getElementById(id);
         if (!scriptElement) {return;}
 
@@ -87,11 +90,9 @@ var Gli = Class.extend({
     },
     setAttribute: function(vbo, attL, attS) {
         var gl = this.gl;
-        for (var i in vbo) {
-            gl.bindBuffer(gl.ARRAY_BUFFER, vbo[i]);
-            gl.enableVertexAttribArray(attL[i]);
-            gl.vertexAttribPointer(attL[i], attS[i], gl.FLOAT, false, 0, 0);
-        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        gl.enableVertexAttribArray(attL);
+        gl.vertexAttribPointer(attL, attS, gl.FLOAT, false, 0, 0);
     },
     createIbo: function(data) {
         var gl = this.gl;
@@ -122,8 +123,8 @@ var Gli = Class.extend({
                     height_ratio = img.height / img.width;
                 }
                 var canvas = document.createElement('CANVAS');
-                canvas.width = this.c.width;
-                canvas.height = this.c.height;
+                canvas.width = this.canvas.width;
+                canvas.height = this.canvas.height;
                 var ctx = canvas.getContext("2d");
                 ctx.drawImage(
                     img,
@@ -144,6 +145,7 @@ var Gli = Class.extend({
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.bindTexture(gl.TEXTURE_2D, null);
 
+            this.texture = tex;
             callback && callback(tex);
         }.bind(this);
     },
