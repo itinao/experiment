@@ -1,34 +1,68 @@
 <html>
     <head>
         <title>WebGL sample</title>
-        
-        <script id="vs" type="x-shader/x-vertex">
-attribute vec3 position;
-attribute vec2 textureCoord;
-varying   vec2 vTextureCoord;
-
-void main(void){
-    vTextureCoord = textureCoord;
-    gl_Position   = vec4(position, 1.0);
-}
-        </script>
-        
-        <script id="fs" type="x-shader/x-fragment">
-precision mediump float;
-
-uniform sampler2D texture;
-varying vec2      vTextureCoord;
-
-void main(void){
-    vec4 smpColor = texture2D(texture, vTextureCoord);
-    gl_FragColor  = smpColor;
-}
-        </script>
     </head>
     <body>
-        <canvas id="canvas"></canvas>
+
+<style>
+.box {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  width: 900px;
+  height: 900px;
+}
+.box > div {
+  display: -webkit-box;
+  -webkit-box-orient: horizontal;
+  width: 900px;
+  height: 300px;
+}
+.box > div > div {
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 200, 200, 0.7);
+}
+</style>
+
+        <div class="box">
+            <div>
+                <div><canvas id="canvas1" width="256" height="256"></canvas></div>
+                <div><canvas id="canvas2" width="256" height="256"></canvas></div>
+                <div><canvas id="canvas3" width="256" height="256"></canvas></div>
+            </div>
+            <div>
+                <div><canvas id="canvas4" width="256" height="256"></canvas></div>
+                <div><canvas id="canvas5" width="256" height="256"></canvas></div>
+                <div><canvas id="canvas6" width="256" height="256"></canvas></div>
+            </div>
+            <div>
+                <div><canvas id="canvas7" width="256" height="256"></canvas></div>
+                <div><canvas id="canvas8" width="256" height="256"></canvas></div>
+                <div><canvas id="canvas9" width="256" height="256"></canvas></div>
+            </div>
+        </div>
+
+<link rel="import" href="gl-uzu.html">
+<gl-uzu width="256" height="256" src="img/fctokyo01c.jpg"></gl-uzu>
+
 
 <script>
+var c1 = document.getElementById('canvas1');
+var c2 = document.getElementById('canvas2');
+var c3 = document.getElementById('canvas3');
+var c4 = document.getElementById('canvas4');
+var c5 = document.getElementById('canvas5');
+var c6 = document.getElementById('canvas6');
+var c7 = document.getElementById('canvas7');
+var c8 = document.getElementById('canvas8');
+var c9 = document.getElementById('canvas9');
+
+
+var gl = c1.getContext('webgl') || c1.getContext('experimental-webgl');
+
+
+
+/*
 window.onload = function(){
     // canvasエレメントを取得
     var c = document.getElementById('canvas');
@@ -258,11 +292,11 @@ window.onload = function(){
             canvas.width="256";
             canvas.height="256";
             var ctx = canvas.getContext("2d");
-            ctx.drawImage(document.images[0], (256 - (256 * width_ratio)) / 2, (256 - (256 * height_ratio)) / 2, 256 * width_ratio, 256 * height_ratio);
+            ctx.drawImage(img, (256 - (256 * width_ratio)) / 2, (256 - (256 * height_ratio)) / 2, 256 * width_ratio, 256 * height_ratio);
             var moge = canvas.toDataURL("image/png")
             var img2 = new Image();
-            img2.src=moge;
-            document.body.appendChild(img2);
+            img2.src = moge;
+//            document.body.appendChild(img2);
 
             // テクスチャオブジェクトの生成
             var tex = gl.createTexture();
@@ -292,9 +326,10 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         
         // イメージオブジェクトのソースを指定
         img.src = source;
-        document.body.appendChild(img);
+//        document.body.appendChild(img);
     }
 };
+*/
 </script>
 
 
