@@ -1,5 +1,5 @@
 /**
- *
+ * webglを扱うクラス
  */
 var Gli = Class.extend({
     gl: null,
@@ -30,7 +30,10 @@ var Gli = Class.extend({
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
     },
-    setRenderParam: function() {
+    setRenderParam: function(param) {
+        for (var i in param) {
+            this[i] = param[i];
+        }
         this.setFunc && this.setFunc();
     },
     render: function() {
@@ -123,8 +126,9 @@ var Gli = Class.extend({
                     height_ratio = img.height / img.width;
                 }
                 var canvas = document.createElement('CANVAS');
-                canvas.width = this.canvas.width;
-                canvas.height = this.canvas.height;
+                // ２乗の値に直す
+                canvas.width = Math.pow(2, Math.floor(Math.log2(this.canvas.width)));
+                canvas.height = Math.pow(2, Math.floor(Math.log2(this.canvas.height)));
                 var ctx = canvas.getContext("2d");
                 ctx.drawImage(
                     img,
