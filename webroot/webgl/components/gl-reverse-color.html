@@ -105,16 +105,16 @@ var GlUzu = Gli.extend({
         this.createShadowRoot().appendChild(clone);
 
         // appendChildの後じゃないとgetContextでcontextが取得できない
-        var uzu = new GlUzu(c, doc);
-        uzu.setRenderParam();
+        var gli = new GlUzu(c, doc);
+        gli.setRenderParam();
         var render = function() {
-            var state = uzu.render();
+            var state = gli.render();
             if (!state) {
                 return;
             }
             window.requestAnimationFrame(render);
         };
-        uzu.createTexture(src, render);
+        gli.createTexture(src, render);
       }
     }
   });

@@ -102,20 +102,20 @@ var GlUzu = Gli.extend({
         this.createShadowRoot().appendChild(clone);
 
         // appendChildの後じゃないとgetContextでcontextが取得できない
-        var uzuParam = {
+        var param = {
             screenSize: [width, height], // 画面サイズ
             mosaicScale: scale,// モザイクの大きさ
         };
-        var uzu = new GlUzu(c, doc);
-        uzu.setRenderParam(uzuParam);
+        var gli = new GlUzu(c, doc);
+        gli.setRenderParam(param);
         var render = function() {
-            var state = uzu.render();
+            var state = gli.render();
             if (!state) {
                 return;
             }
             window.requestAnimationFrame(render);
         };
-        uzu.createTexture(src, render);
+        gli.createTexture(src, render);
       }
     }
   });
