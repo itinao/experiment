@@ -15,24 +15,34 @@ uniform sampler2D texture;
 varying vec2      vTextureCoord;
 
 uniform vec2 vScreenSize;
-uniform float fMosaicScale;
+uniform vec2 vCenter;
+uniform float fRadius;
+uniform float fUzuStrength;
 
 void main(void){
-    vec2 vTextureCoord2 = vTextureCoord;
-    vTextureCoord2.x = floor(vTextureCoord.x  * vScreenSize.x / fMosaicScale) / (vScreenSize.x / fMosaicScale) + (fMosaicScale/2.0) / vScreenSize.x;
-    vTextureCoord2.y = floor(vTextureCoord.y  * vScreenSize.y / fMosaicScale) / (vScreenSize.y / fMosaicScale) + (fMosaicScale/2.0) / vScreenSize.y;
+    vec2 pos = (vTextureCoord * vScreenSize) - vCenter;
+    if (length(pos) >= fRadius) {
+      gl_FragColor = texture2D(texture, vTextureCoord);
+      return;
+    }
+    float len = length(vec3(pos.x, pos.y, 0.0));
+    float uzu = min(max(1.0 - (len / fRadius), 0.0), 1.0)  * fUzuStrength;
 
-    vec4 smpColor = texture2D(texture, vTextureCoord2);
+    float x = pos.x * cos(uzu) - pos.y * sin(uzu); // x位置を回転
+    float y = pos.x * sin(uzu) + pos.y * cos(uzu); // y位置を回転
+
+    vec2 retPos = (vec2(x, y) + vCenter)  / vScreenSize;
+    vec4 smpColor = texture2D(texture, retPos);
     gl_FragColor  = smpColor;
 }
 </script>
 
-<template id="gl-mosaic">
+<template id="gl-uzu">
   <canvas id="c"></canvas>
 </template>
  
-<script src="js/class.js"></script>
-<script src="js/Gli.js"></script>
+<script src="../js/class.js"></script>
+<script src="../js/Gli.js"></script>
 <script>
 var GlUzu = Gli.extend({
   position: [
@@ -66,10 +76,13 @@ var GlUzu = Gli.extend({
       var index = this.index;
       var gl = this.gl;
       var prg = this.prg;
-      this.mosaicScale = (this.mosaicScale - 0.1) <= 1 ? 1 : this.mosaicScale - 0.1;
+      this.radius = (this.radius - 1) <= 0 ? 0 : this.radius - 1;
+      this.uzuStrength = (this.uzuStrength - 1) <= 0 ? 0 : this.uzuStrength - 1;
 
       gl.uniform2fv(gl.getUniformLocation(prg, 'vScreenSize'), this.screenSize);
-      gl.uniform1f(gl.getUniformLocation(prg, 'fMosaicScale'), this.mosaicScale);
+      gl.uniform2fv(gl.getUniformLocation(prg, 'vCenter'), this.center);
+      gl.uniform1f(gl.getUniformLocation(prg, 'fRadius'), this.radius);
+      gl.uniform1f(gl.getUniformLocation(prg, 'fUzuStrength'), this.uzuStrength);
 
       gl.bindTexture(gl.TEXTURE_2D, this.texture);
       gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
@@ -87,9 +100,11 @@ var GlUzu = Gli.extend({
       value: function() {
         var width = this.getAttribute("width");
         var height = this.getAttribute("height");
+        var radius = this.getAttribute("radius") || 500;
+        var strength = this.getAttribute("strength") || 100;
         var src = this.getAttribute("src");
 
-        var t = doc.querySelector('#gl-mosaic');
+        var t = doc.querySelector('#gl-uzu');
         var clone = doc.importNode(t.content, true);
 
 
@@ -103,10 +118,12 @@ var GlUzu = Gli.extend({
         // appendChildの後じゃないとgetContextでcontextが取得できない
         var uzuParam = {
             screenSize: [width, height], // 画面サイズ
-            mosaicScale: 20.0,// モザイクの濃さ
+            center: [width / 2, height / 2], // 渦の位置
+            radius: radius,// 渦の大きさ
+            uzuStrength: strength,// 渦の強さ
         };
         var uzu = new GlUzu(c, doc);
-        uzu.setRenderParam(uzuParam);// TODO: uzuParamをつかう
+        uzu.setRenderParam(uzuParam);
         var render = function() {
             var state = uzu.render();
             if (!state) {
@@ -119,6 +136,6 @@ var GlUzu = Gli.extend({
     }
   });
 
-  document.registerElement('gl-mosaic', {prototype: prototype});
+  document.registerElement('gl-uzu', {prototype: prototype});
 })();
 </script>
