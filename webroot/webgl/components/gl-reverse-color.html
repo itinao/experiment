@@ -1,0 +1,124 @@
+<script id="vs" type="x-shader/x-vertex">
+attribute vec3 position;
+attribute vec2 textureCoord;
+varying   vec2 vTextureCoord;
+
+void main(void){
+    vTextureCoord = textureCoord;
+    gl_Position   = vec4(position, 1.0);
+}
+</script>
+<script id="fs" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform sampler2D texture;
+varying vec2      vTextureCoord;
+
+uniform vec3 vReverseColor;
+
+void main(void){
+    vec4 color = texture2D(texture, vTextureCoord);
+    gl_FragColor =  vec4(abs(vReverseColor.x - color.x), abs(vReverseColor.y - color.y), abs(vReverseColor.z - color.z), 1.0);
+}
+</script>
+
+<template id="gl-reverse-color">
+  <canvas id="c"></canvas>
+</template>
+ 
+<script src="../js/class.js"></script>
+<script src="../js/Gli.js"></script>
+<script>
+var GlUzu = Gli.extend({
+  position: [
+    -1.0,  1.0,  0.0,
+     1.0,  1.0,  0.0,
+    -1.0, -1.0,  0.0,
+     1.0, -1.0,  0.0
+  ],
+  textureCoord: [
+    0.0, 0.0,
+    1.0, 0.0,
+    0.0, 1.0,
+    1.0, 1.0
+  ],
+  index: [
+    0, 1, 2,
+    1, 2, 3
+  ],
+  reverseColor: [
+    1.0, 1.0, 1.0
+  ],
+  setFunc: function() {
+      var gl = this.gl;
+      var prg = this.prg;
+  
+      // VBOとIBOの登録
+      this.setAttribute(this.createVbo(this.position), gl.getAttribLocation(prg, 'position'), 3);
+      this.setAttribute(this.createVbo(this.textureCoord), gl.getAttribLocation(prg, 'textureCoord'), 2);
+
+      var iIndex = this.createIbo(this.index);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iIndex);
+  },
+  renderFunc: function() {
+      var index = this.index;
+      var gl = this.gl;
+      var prg = this.prg;
+
+      if (0 < this.reverseColor[0]) {
+          this.reverseColor[0] = this.reverseColor[0] - 0.03;
+      } else if (0 < this.reverseColor[1]) {
+          this.reverseColor[1] = this.reverseColor[1] - 0.03;
+      } else if (0 < this.reverseColor[2]) {
+          this.reverseColor[2] = this.reverseColor[2] - 0.03;
+      }
+
+      gl.uniform3fv(gl.getUniformLocation(prg, 'vReverseColor'), this.reverseColor);
+
+      gl.bindTexture(gl.TEXTURE_2D, this.texture);
+      gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
+  }
+});
+</script>
+
+<script>
+(function() {
+  var currentScript = document._currentScript || document.currentScript;
+  var doc = currentScript.ownerDocument;
+
+  var prototype = Object.create(HTMLElement.prototype, {
+    createdCallback: {
+      value: function() {
+        var width = this.getAttribute("width");
+        var height = this.getAttribute("height");
+        var src = this.getAttribute("src");
+
+        var t = doc.querySelector('#gl-reverse-color');
+        var clone = doc.importNode(t.content, true);
+
+
+        // appendChildの前じゃないとcloneした要素が取れない
+        var c = clone.getElementById("c");
+        c.width = width;
+        c.height = height;
+
+        this.createShadowRoot().appendChild(clone);
+
+        // appendChildの後じゃないとgetContextでcontextが取得できない
+        var uzu = new GlUzu(c, doc);
+        uzu.setRenderParam();
+        var render = function() {
+            var state = uzu.render();
+            if (!state) {
+                return;
+            }
+            window.requestAnimationFrame(render);
+        };
+        uzu.createTexture(src, render);
+      }
+    }
+  });
+
+  document.registerElement('gl-reverse-color', {prototype: prototype});
+})();
+</script>
