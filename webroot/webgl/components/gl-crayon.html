@@ -15,19 +15,26 @@ uniform sampler2D texture;
 varying vec2      vTextureCoord;
 
 uniform vec2 vScreenSize;
-uniform float fMosaicScale;
+uniform float fRadius;
+
+// 乱数生成
+float rand(vec2 co) {
+    float a = fract(dot(co, vec2(2.067390879775102, 12.451168662908249))) - 0.5;
+    float s = a * (6.182785114200511 + a * a * (-38.026512460676566 + a * a * 53.392573080032137));
+    float t = fract(s * 43758.5453);
+    return t;
+}
 
 void main(void){
-    vec2 vTextureCoord2 = vTextureCoord;
-    vTextureCoord2.x = floor(vTextureCoord.x  * vScreenSize.x / fMosaicScale) / (vScreenSize.x / fMosaicScale) + (fMosaicScale/2.0) / vScreenSize.x;
-    vTextureCoord2.y = floor(vTextureCoord.y  * vScreenSize.y / fMosaicScale) / (vScreenSize.y / fMosaicScale) + (fMosaicScale/2.0) / vScreenSize.y;
-
-    vec4 smpColor = texture2D(texture, vTextureCoord2);
+    float radius = fRadius;
+    float x = (vTextureCoord.x * vScreenSize.x) + rand(vTextureCoord) * radius * 2.0 - radius;
+    float y = (vTextureCoord.y * vScreenSize.y) + rand(vec2(vTextureCoord.y, vTextureCoord.x)) * radius * 2.0 - radius;
+    vec4 smpColor = texture2D(texture, vec2(x, y) / vScreenSize );
     gl_FragColor  = smpColor;
 }
 </script>
 
-<template id="gl-mosaic">
+<template id="gl-crayon">
   <canvas id="c"></canvas>
 </template>
  
@@ -66,10 +73,10 @@ var GlUzu = Gli.extend({
       var index = this.index;
       var gl = this.gl;
       var prg = this.prg;
-      this.mosaicScale = (this.mosaicScale - 0.1) <= 1 ? 1 : this.mosaicScale - 0.1;
+      this.radius = (this.radius - 0.1) <= 0 ? 0 : this.radius - 0.1;
 
       gl.uniform2fv(gl.getUniformLocation(prg, 'vScreenSize'), this.screenSize);
-      gl.uniform1f(gl.getUniformLocation(prg, 'fMosaicScale'), this.mosaicScale);
+      gl.uniform1f(gl.getUniformLocation(prg, 'fRadius'), this.radius);
 
       gl.bindTexture(gl.TEXTURE_2D, this.texture);
       gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
@@ -87,10 +94,10 @@ var GlUzu = Gli.extend({
       value: function() {
         var width = this.getAttribute("width");
         var height = this.getAttribute("height");
-        var scale = this.getAttribute("scale") || 20;
+        var radius = this.getAttribute("radius") || 5;
         var src = this.getAttribute("src");
 
-        var t = doc.querySelector('#gl-mosaic');
+        var t = doc.querySelector('#gl-crayon');
         var clone = doc.importNode(t.content, true);
 
 
@@ -104,7 +111,7 @@ var GlUzu = Gli.extend({
         // appendChildの後じゃないとgetContextでcontextが取得できない
         var uzuParam = {
             screenSize: [width, height], // 画面サイズ
-            mosaicScale: scale,// モザイクの大きさ
+            radius: radius,// ぼやかし具合
         };
         var uzu = new GlUzu(c, doc);
         uzu.setRenderParam(uzuParam);
@@ -120,6 +127,6 @@ var GlUzu = Gli.extend({
     }
   });
 
-  document.registerElement('gl-mosaic', {prototype: prototype});
+  document.registerElement('gl-crayon', {prototype: prototype});
 })();
 </script>
