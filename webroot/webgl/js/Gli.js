@@ -7,6 +7,7 @@ var Gli = Class.extend({
     prg: null,
     doc: null,
     texture: null,
+    clearColor: [0.0, 0.0, 0.0, 0.0],
 
     setFunc: null,
     renderFunc: null,
@@ -20,7 +21,7 @@ var Gli = Class.extend({
         this.createContext();
         var gl = this.gl;
 
-        gl.clearColor(0.0, 0.0, 0.0, 0.0);
+        gl.clearColor(this.clearColor[0], this.clearColor[1], this.clearColor[2], this.clearColor[3]);
         gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         var vShader = this.createShader('vs');

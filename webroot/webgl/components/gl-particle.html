@@ -1,0 +1,179 @@
+<script id="vs" type="x-shader/x-vertex">
+attribute vec3 position0;
+attribute vec3 position1;
+attribute vec3 color;
+varying vec4 vColor;
+//uniform mat4 mvpMatrix;
+uniform float pointSize;
+uniform float timeScale;
+uniform float colorScale;
+
+void main(void) {
+    vec3 diff = (vec3(1, 1, 1) - color) * colorScale;
+    vColor = vec4(color + diff, 1);
+    gl_Position = vec4(position0 + (position1 - position0) * timeScale, 1.0);
+//    gl_Position = mvpMatrix * vec4(position, 1.0);
+    gl_PointSize = pointSize;
+}
+</script>
+<script id="fs" type="x-shader/x-fragment">
+precision mediump float;
+varying vec4 vColor;
+void main(void) {
+    gl_FragColor = vColor;
+}
+</script>
+
+<template id="gl-particle">
+  <canvas id="c"></canvas>
+</template>
+ 
+<script src="../js/class.js"></script>
+<script src="../js/Gli.js"></script>
+<script>
+var GlParticle = Gli.extend({
+  // 粒子数
+  num_particles: 65536,
+  // 粒子の大きさ
+  pointSize: 2.0,
+  // 粒子のばらばら具合
+  timeScale: 0.00,
+  // 粒子の白さ
+  colorScale: 0.00,
+  setFunc: function() {
+      var gl = this.gl;
+      var prg = this.prg;
+  
+      ct = document.createElement("CANVAS");
+      ct.width = 256;
+      ct.height = 256;
+      tx = ct.getContext("2d");
+      image = document.createElement("IMG");
+      image.src = this.src;
+      tx.drawImage(image, 0, 0, 256, 256);
+      imageArr = tx.getImageData(0, 0, 256, 256).data;
+      var radius = 10;
+      var imageWidth = image.width;
+      var imageHeight = image.height;
+      var numPixels = imageWidth * imageHeight;
+      var rate = Math.sqrt(numPixels / this.num_particles);
+      var posScale = 128 * rate;
+      var r, g, b, x0, y0, z0, x1, y1, z1;
+      var vColor = [];
+      var vPosition0 = [];
+      var vPosition1 = [];
+      for (var i = 0; i < this.num_particles; i++) {
+        var p = i;
+        var cIndex = p * 3;
+        var imageindexX = (rate * i % imageWidth) >> 0;
+        var imageindexY = imageHeight - rate * (rate * i / imageWidth >> 0) >> 0;
+        var pixIndex = (imageindexX + imageWidth * imageindexY) >> 0;
+        r = imageArr[pixIndex * 4] / 255;
+        g = imageArr[pixIndex * 4 + 1] / 255;
+        b = imageArr[pixIndex * 4 + 2] / 255;
+        vColor[cIndex] = r;
+        vColor[cIndex + 1] = g;
+        vColor[cIndex + 2] = b;
+      
+        var pIndex = p * 3;
+        //並べられた位置(状態0)
+        x0 = (rate * i % imageWidth) - imageWidth / 2;
+        y0 = rate * (rate * i / imageWidth >> 0) - imageHeight / 2;
+        z0 = 0;
+        x0 /= posScale;
+        y0 /= posScale;
+        vPosition0[pIndex] = x0;
+        vPosition0[pIndex + 1] = y0;
+        vPosition0[pIndex + 2] = z0;
+      
+        //ランダムな位置(状態1)
+        x1 = (-0.5 + Math.random()) * radius;
+        y1 = (-0.5 + Math.random()) * radius;
+        z1 = (-0.5 + Math.random()) * radius;
+        vPosition1[pIndex] = x1;
+        vPosition1[pIndex + 1] = y1;
+        vPosition1[pIndex + 2] = z1;
+      }
+      this.setAttribute(this.createVbo(vPosition0), gl.getAttribLocation(prg, 'position0'), 3);
+      this.setAttribute(this.createVbo(vPosition1), gl.getAttribLocation(prg, 'position1'), 3);
+      this.setAttribute(this.createVbo(vColor), gl.getAttribLocation(prg, 'color'), 3);
+  },
+  renderFunc: function() {
+      var gl = this.gl;
+      var prg = this.prg;
+
+      if (this.calcStateTime === 'minus') {
+        this.timeScale = this.timeScale - 0.001;
+        if (this.timeScale <= 0.00) {
+            this.calcStateTime = "plus";
+        }
+      } else if (this.calcStateTime === 'plus') {
+        this.timeScale = this.timeScale + 0.001;
+        if (0.10 <= this.timeScale) {
+            this.calcStateTime = "minus";
+        }
+      }
+
+      if (this.calcStateColor === 'minus') {
+        this.colorScale = this.colorScale - 0.01;
+        if (this.colorScale <= 0.00) {
+            this.calcStateColor = "plus";
+        }
+      } else if (this.calcStateColor === 'plus') {
+        this.colorScale = this.colorScale + 0.01;
+        if (1.00 <= this.colorScale) {
+            this.calcStateColor = "minus";
+        }
+      }
+
+      gl.uniform1f(gl.getUniformLocation(prg, 'pointSize'), this.pointSize);
+      gl.uniform1f(gl.getUniformLocation(prg, 'timeScale'), this.timeScale);
+      gl.uniform1f(gl.getUniformLocation(prg, 'colorScale'), this.colorScale);
+      gl.drawArrays(gl.POINTS, 0, this.num_particles);
+  },
+  calcStateTime: "plus",
+  calcStateColor: "plus",
+});
+</script>
+
+<script>
+(function() {
+  var currentScript = document._currentScript || document.currentScript;
+  var doc = currentScript.ownerDocument;
+
+  var prototype = Object.create(HTMLElement.prototype, {
+    createdCallback: {
+      value: function() {
+        var width = this.getAttribute("width");
+        var height = this.getAttribute("height");
+        var scale = this.getAttribute("scale") || 20;
+        var src = this.getAttribute("src");
+
+        var t = doc.querySelector('#gl-particle');
+        var clone = doc.importNode(t.content, true);
+
+
+        // appendChildの前じゃないとcloneした要素が取れない
+        var c = clone.getElementById("c");
+        c.width = width;
+        c.height = height;
+
+        this.createShadowRoot().appendChild(clone);
+
+        // appendChildの後じゃないとgetContextでcontextが取得できない
+        var gli = new GlParticle(c, doc);
+        gli.setRenderParam({
+          src: src
+        });
+        var render = function() {
+            gli.render();
+            window.requestAnimationFrame(render);
+        };
+        render();
+      }
+    }
+  });
+
+  document.registerElement('gl-particle', {prototype: prototype});
+})();
+</script>
