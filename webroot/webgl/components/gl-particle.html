@@ -35,7 +35,7 @@ var GlParticle = Gli.extend({
   // 粒子数
   num_particles: 65536,
   // 粒子の大きさ
-  pointSize: 2.0,
+  pointSize: 1.0,
   // 粒子のばらばら具合
   timeScale: 0.00,
   // 粒子の白さ
@@ -114,17 +114,17 @@ var GlParticle = Gli.extend({
         }
       }
 
-      if (this.calcStateColor === 'minus') {
-        this.colorScale = this.colorScale - 0.01;
-        if (this.colorScale <= 0.00) {
-            this.calcStateColor = "plus";
-        }
-      } else if (this.calcStateColor === 'plus') {
-        this.colorScale = this.colorScale + 0.01;
-        if (1.00 <= this.colorScale) {
-            this.calcStateColor = "minus";
-        }
-      }
+//      if (this.calcStateColor === 'minus') {
+//        this.colorScale = this.colorScale - 0.01;
+//        if (this.colorScale <= 0.00) {
+//            this.calcStateColor = "plus";
+//        }
+//      } else if (this.calcStateColor === 'plus') {
+//        this.colorScale = this.colorScale + 0.01;
+//        if (1.00 <= this.colorScale) {
+//            this.calcStateColor = "minus";
+//        }
+//      }
 
       gl.uniform1f(gl.getUniformLocation(prg, 'pointSize'), this.pointSize);
       gl.uniform1f(gl.getUniformLocation(prg, 'timeScale'), this.timeScale);
