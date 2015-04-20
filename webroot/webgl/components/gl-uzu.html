@@ -76,8 +76,33 @@ var GlUzu = Gli.extend({
       var index = this.index;
       var gl = this.gl;
       var prg = this.prg;
+
       this.radius = (this.radius - 1) <= 0 ? 0 : this.radius - 1;
       this.uzuStrength = (this.uzuStrength - 1) <= 0 ? 0 : this.uzuStrength - 1;
+
+//      if (this.calcStateRadius === 'minus') {
+//          this.radius = this.radius - 1;
+//          if (this.radius <= 0) {
+//              this.calcStateRadius = "plus";
+//          }
+//      } else if (this.calcStateRadius === 'plus') {
+//          this.radius = this.radius + 1;
+//          if (500 <= this.radius) {
+//              this.calcStateRadius = "minus";
+//          }
+//      }
+
+//      if (this.calcStateSt === 'minus') {
+//          this.uzuStrength = this.uzuStrength - 1;
+//          if (this.uzuStrength <= 0) {
+//              this.calcStateSt = "plus";
+//          }
+//      } else if (this.calcStateSt === 'plus') {
+//          this.uzuStrength = this.uzuStrength + 1;
+//          if (100 <= this.uzuStrength) {
+//              this.calcStateSt = "minus";
+//          }
+//      }
 
       gl.uniform2fv(gl.getUniformLocation(prg, 'vScreenSize'), this.screenSize);
       gl.uniform2fv(gl.getUniformLocation(prg, 'vCenter'), this.center);
@@ -86,7 +111,9 @@ var GlUzu = Gli.extend({
 
       gl.bindTexture(gl.TEXTURE_2D, this.texture);
       gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
-  }
+  },
+  calcStateRadius: 'minus',
+  calcStateSt: 'minus'
 });
 </script>
 
