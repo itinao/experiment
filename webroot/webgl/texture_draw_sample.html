@@ -1,0 +1,148 @@
+<html>
+<head>
+    <title>texture sample</title>
+    <script src="js/class.js"></script>
+    <script src="js/Gli.js"></script>
+</head>
+<body>
+<style>
+body > div {display: table-cell;}
+</style>
+
+
+<div>
+<p>ただの画像</p>
+<img src="img/fctokyo.jpg" width="256" height="256">
+</div>
+
+
+<div>
+<p>gl.drawElementsで描画</p>
+<canvas id="c1" width="256" height="256"></canvas>
+<script id="vs1" type="x-shader/x-vertex">
+attribute vec3 position;
+attribute vec2 textureCoord;
+varying   vec2 vTextureCoord;
+void main(void){
+    vTextureCoord = textureCoord;
+    gl_Position   = vec4(position, 1.0);
+}
+</script>
+<script id="fs1" type="x-shader/x-fragment">
+precision mediump float;
+uniform sampler2D texture;
+varying vec2      vTextureCoord;
+void main(void){
+    vec4 smpColor = texture2D(texture, vTextureCoord);
+    gl_FragColor  = smpColor;
+}
+</script>
+<script>
+var Gl1 = Gli.extend({
+    // 頂点の位置
+    position: [
+        -1.0,  1.0,  0.0,
+         1.0,  1.0,  0.0,
+        -1.0, -1.0,  0.0,
+         1.0, -1.0,  0.0
+    ],
+    // テクスチャ座標
+    textureCoord: [
+        0.0, 0.0,
+        1.0, 0.0,
+        0.0, 1.0,
+        1.0, 1.0
+    ],
+    // 頂点インデックス
+    index: [
+        0, 1, 2,
+        1, 2, 3
+    ],
+    renderFunc: function() {
+        var gl = this.gl;
+        // VBOとIBOの登録
+        this.setAttribute(this.createVbo(this.position), gl.getAttribLocation(this.prg, 'position'), 3);
+        this.setAttribute(this.createVbo(this.textureCoord), gl.getAttribLocation(this.prg, 'textureCoord'), 2);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.createIbo(this.index));
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.drawElements(gl.TRIANGLES, this.index.length, gl.UNSIGNED_SHORT, 0);
+    }
+});
+var c1 = document.getElementById("c1");
+var gl1 = new Gl1(c1, document, 'vs1', 'fs1');
+gl1.createTexture("img/fctokyo.jpg", gl1.render.bind(gl1));
+</script>
+</div>
+
+
+<div>
+<p>gl.Arraysで描画</p>
+<canvas id="c2" width="256" height="256"></canvas>
+<script id="vs2" type="x-shader/x-vertex">
+attribute vec3 position;
+attribute vec3 color;
+varying vec4 vColor;
+void main(void) {
+    vColor = vec4(color, 1.0);
+    gl_Position = vec4(position, 1.0);
+    gl_PointSize = 1.0;
+}
+</script>
+<script id="fs2" type="x-shader/x-fragment">
+precision mediump float;
+varying vec4 vColor;
+void main(void) {
+    gl_FragColor = vColor;
+}
+</script>
+<script>
+var Gl2 = Gli.extend({
+    numParticles: 65536,// 粒子数
+    renderFunc: function() {
+        var gl = this.gl;
+        var numPixels = this.width * this.height;
+        var rate = Math.sqrt(numPixels / this.numParticles);
+        var posScale = 128 * rate;
+        var vColor = [], vPosition = [];
+        for (var i = 0; i < this.numParticles; i++) {
+            var p = i;
+            var cIndex = p * 3;
+            var imageindexX = (rate * i % this.width) >> 0;
+            var imageindexY = this.height - rate * (rate * i / this.width >> 0) >> 0;
+            var pixIndex = (imageindexX + this.width * imageindexY) >> 0;
+            vColor[cIndex] = this.imageArr[pixIndex * 4] / 255;
+            vColor[cIndex + 1] = this.imageArr[pixIndex * 4 + 1] / 255;
+            vColor[cIndex + 2] = this.imageArr[pixIndex * 4 + 2] / 255;
+
+            var pIndex = p * 3;
+            vPosition[pIndex] = ((rate * i % this.width) - this.width / 2) / posScale;
+            vPosition[pIndex + 1] = (rate * (rate * i / this.width >> 0) - this.height / 2) / posScale;
+            vPosition[pIndex + 2] = 0;
+        }
+        this.setAttribute(this.createVbo(vPosition), gl.getAttribLocation(this.prg, 'position'), 3);
+        this.setAttribute(this.createVbo(vColor), gl.getAttribLocation(this.prg, 'color'), 3);
+        gl.drawArrays(gl.POINTS, 0, this.numParticles);
+    }
+});
+var img = document.createElement('IMG');
+img.src = "img/fctokyo.jpg";
+img.onload = function() {
+    var c2 = document.getElementById("c2")
+    var _c = document.createElement('CANVAS');
+    var width = c2.width;
+    var height = c2.height;
+    _c.width = width;
+    _c.height = height;
+    var _ctx = _c.getContext("2d");
+    _ctx.drawImage(img, 0, 0, width, height);
+    var imageArr = _ctx.getImageData(0, 0, width, height).data;// width*heightピクセルのImageDataオブジェクト取得
+
+    var gl2 = new Gl2(c2, document, 'vs2', 'fs2');
+    gl2.setRenderParam({width: width, height: height, imageArr: imageArr});
+    gl2.render();
+};
+</script>
+</div>
+
+</body>
+</html>

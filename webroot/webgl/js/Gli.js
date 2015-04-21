@@ -12,7 +12,7 @@ var Gli = Class.extend({
     setFunc: null,
     renderFunc: null,
 
-    init: function(canvas, doc) {
+    init: function(canvas, doc, vs, fs) {
         if (!canvas) {
             return;
         }
@@ -20,12 +20,14 @@ var Gli = Class.extend({
         this.doc = doc || document;
         this.createContext();
         var gl = this.gl;
+        var _vs = vs || 'vs';
+        var _fs = fs || 'fs';
 
         gl.clearColor(this.clearColor[0], this.clearColor[1], this.clearColor[2], this.clearColor[3]);
         gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        var vShader = this.createShader('vs');
-        var fShader = this.createShader('fs');
+        var vShader = this.createShader(_vs);
+        var fShader = this.createShader(_fs);
         this.createProgram(vShader, fShader);
 
         gl.enable(gl.DEPTH_TEST);
