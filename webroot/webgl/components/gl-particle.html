@@ -33,9 +33,9 @@ void main(void) {
 <script>
 var GlParticle = Gli.extend({
   // 粒子数
-  num_particles: 65536,
+  num_particles: 147350,
   // 粒子の大きさ
-  pointSize: 1.0,
+  pointSize: 5.0,
   // 粒子のばらばら具合
   timeScale: 0.00,
   // 粒子の白さ
@@ -44,20 +44,20 @@ var GlParticle = Gli.extend({
       var gl = this.gl;
       var prg = this.prg;
   
-      ct = document.createElement("CANVAS");
-      ct.width = 256;
-      ct.height = 256;
-      tx = ct.getContext("2d");
       image = document.createElement("IMG");
       image.src = this.src;
-      tx.drawImage(image, 0, 0, 256, 256);
-      imageArr = tx.getImageData(0, 0, 256, 256).data;
+      ct = document.createElement("CANVAS");
+      ct.width = image.width;
+      ct.height = image.height;
+      tx = ct.getContext("2d");
+      tx.drawImage(image, 0, 0, image.width, image.height);
+      imageArr = tx.getImageData(0, 0, image.width, image.height).data;
       var radius = 10;
       var imageWidth = image.width;
       var imageHeight = image.height;
       var numPixels = imageWidth * imageHeight;
       var rate = Math.sqrt(numPixels / this.num_particles);
-      var posScale = 128 * rate;
+      var posScale = (imageHeight / 2) * rate;
       var r, g, b, x0, y0, z0, x1, y1, z1;
       var vColor = [];
       var vPosition0 = [];
@@ -162,14 +162,18 @@ var GlParticle = Gli.extend({
 
         // appendChildの後じゃないとgetContextでcontextが取得できない
         var gli = new GlParticle(c, doc);
-        gli.setRenderParam({
-          src: src
-        });
-        var render = function() {
-            gli.render();
-            window.requestAnimationFrame(render);
-        };
-        render();
+        var _img = document.createElement('IMG');
+        _img.src = src;
+        _img.onload = function() {
+          gli.setRenderParam({
+            src: src
+          });
+          var render = function() {
+              gli.render();
+              window.requestAnimationFrame(render);
+          };
+          render();
+        }
       }
     }
   });
