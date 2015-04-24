@@ -33,7 +33,7 @@ void main(void) {
 <script>
 var GlParticle = Gli.extend({
   // 粒子数
-  num_particles: 147350,
+  numParticles: 147350,
   // 粒子の大きさ
   pointSize: 5.0,
   // 粒子のばらばら具合
@@ -56,13 +56,14 @@ var GlParticle = Gli.extend({
       var imageWidth = image.width;
       var imageHeight = image.height;
       var numPixels = imageWidth * imageHeight;
-      var rate = Math.sqrt(numPixels / this.num_particles);
+      this.numParticles = numPixels;
+      var rate = Math.sqrt(numPixels / this.numParticles);
       var posScale = (imageHeight / 2) * rate;
       var r, g, b, x0, y0, z0, x1, y1, z1;
       var vColor = [];
       var vPosition0 = [];
       var vPosition1 = [];
-      for (var i = 0; i < this.num_particles; i++) {
+      for (var i = 0; i < this.numParticles; i++) {
         var p = i;
         var cIndex = p * 3;
         var imageindexX = (rate * i % imageWidth) >> 0;
@@ -129,7 +130,7 @@ var GlParticle = Gli.extend({
       gl.uniform1f(gl.getUniformLocation(prg, 'pointSize'), this.pointSize);
       gl.uniform1f(gl.getUniformLocation(prg, 'timeScale'), this.timeScale);
       gl.uniform1f(gl.getUniformLocation(prg, 'colorScale'), this.colorScale);
-      gl.drawArrays(gl.POINTS, 0, this.num_particles);
+      gl.drawArrays(gl.POINTS, 0, this.numParticles);
   },
   calcStateTime: "plus",
   calcStateColor: "plus",
