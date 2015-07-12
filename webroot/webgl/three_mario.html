@@ -1,0 +1,49 @@
+<html>
+<head>
+  <script src="js/three.js"></script>
+</head>
+
+<body>
+<canvas id="c"></canvas>
+
+
+<script>
+// Rendererを用意
+var c = document.getElementById('c');
+renderer = new THREE.WebGLRenderer({
+  canvas: c
+});
+//renderer.clearColor(0x000000);
+renderer.setSize(500, 500);
+
+// Cameraを用意
+camera = new THREE.PerspectiveCamera();
+camera.position.z = 500;
+
+var loader = new THREE.ObjectLoader();
+loader.load("models/mario-sculpture.scene/mario-sculpture.json",function ( obj ) {
+  scene.add(obj);
+});
+
+// Sceneを用意
+scene = new THREE.Scene();
+scene.add(camera);
+
+//// 三角を作る
+//var material = new THREE.MeshBasicMaterial({
+//  color: 0xffffff
+//});
+//var shape = new THREE.Shape();
+//shape.moveTo( 0, 100);// 始点
+//shape.lineTo( 100, -50);// ここまで線をひく
+//shape.lineTo(-100, -50);// ここまで線をひく
+//shape.lineTo( 0, 100);// ここまで線をひく
+//var geometry = new THREE.ShapeGeometry(shape);
+//scene.add(new THREE.Mesh(geometry, material));
+
+// 描画
+renderer.render(scene, camera);
+</script>
+</body>
+
+</html>
