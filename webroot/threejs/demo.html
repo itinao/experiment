@@ -1,0 +1,628 @@
+<!DOCTYPE HTML>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>threejsテスト</title>
+    <script type="text/javascript" src="bower_components/threejs/build/three.js"></script>
+    <script type="text/javascript" src="bower_components/threejs/examples/js/controls/TrackballControls.js"></script>
+    <script type="text/javascript" src="bower_components/vue/dist/vue.js"></script>
+<script type="x-shader/x-vertex" id="vs">
+uniform bool edge;
+varying vec3 vNormal;
+
+void main(void) {
+    vec3 pos = position;
+    
+    if (edge) {
+        pos += normal * 0.04;
+    }
+    vNormal = normal;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+}
+</script>
+<script type="x-shader/x-fragment" id="fs">
+precision mediump float;
+
+uniform vec3 lightDirection;
+uniform sampler2D texture;
+uniform vec4 edgeColor;
+
+varying vec3 vNormal;
+
+void main(void) {
+    if (edgeColor.a > 0.0) {
+        gl_FragColor = edgeColor;
+    }
+    else {
+        float diffuse = clamp(dot(vNormal, lightDirection), 0.0, 1.0);
+        vec4 smpColor = texture2D(texture, vec2(diffuse, 0.0));
+        gl_FragColor = smpColor;
+    }
+}
+</script>
+
+
+<script id="vs-p" type="x-shader/x-vertex">
+attribute vec3 position0;
+attribute vec3 position1;
+attribute vec3 color;
+varying vec4 vColor;
+//uniform mat4 mvpMatrix;
+uniform float pointSize;
+uniform float timeScale;
+uniform float colorScale;
+
+void main(void) {
+    vec3 diff = (vec3(1, 1, 1) - color) * colorScale;
+    vColor = vec4(color + diff, 1);
+    gl_Position = vec4(position0 + (position1 - position0) * timeScale, 1.0);
+//    gl_Position = mvpMatrix * vec4(position, 1.0);
+    gl_PointSize = pointSize;
+}
+</script>
+<script id="fs-p" type="x-shader/x-fragment">
+precision mediump float;
+varying vec4 vColor;
+void main(void) {
+    gl_FragColor = vColor;
+}
+</script>
+
+
+<style type="text/css">
+html, body, p, h1, h2, h3, h4, h5, h6, figure {
+padding: 0;
+margin: 0;
+}
+body {
+overflow: hidden;
+}
+.controller {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+color: #fff;
+}
+.controller section {
+position: absolute;
+top: 0;
+left: 0;
+}
+.droppable {
+position: absolute;
+top: 0;
+left: 0;
+height: 100%;
+width: 100%;
+}
+.hovered {
+border: #ccc dashed 1em;
+box-sizing: border-box;
+text-align: center;
+line-height: 50px;
+}
+.hovered:after {
+content: 'drag and drop Here!';
+}
+</style>
+</head>
+<body>
+
+<article class="controller">
+    <figure id="droppable" class="droppable"></figure>
+    <section>
+        <h1>ほげほげ</h1>
+        <div>
+            <p>もげもげ</p>
+            <input type="color">
+        </div>
+        <div>
+            そのまま<input type="radio" name="mapping_type" onclick="addImage()" checked>
+            法線<input type="radio" name="mapping_type" onclick="addImage('normal')">
+            鏡面<input type="radio" name="mapping_type" onclick="addImage('specular')">
+            バンプ<input type="radio" name="mapping_type" onclick="addImage('bump')">
+            ライト<input type="radio" name="mapping_type" onclick="addImage('light')">
+        </div>
+    </section>
+</article>
+
+<script type="text/javascript">
+var droppable = document.getElementById('droppable');
+if (!window.FileReader) {
+  alert("File API がサポートされていません。");
+}
+var cancelEvent = function(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  return false;
+};
+var handleDroppedFile = function(event) {
+  cancelEvent(event);
+  event = event.originalEvent || event;
+  var file = event.dataTransfer.files[0];
+  var fileReader = new FileReader();
+  fileReader.onload = function(event) {
+//    droppable.textContent = file.name;// + "]" + event.target.result);
+  }
+  if (file.type.indexOf('image/') === 0) {
+    previewFile(file);
+  } else if (file.type.indexOf('text/') === 0) {
+    drawObj('model/' + file.name);
+  }
+  fileReader.readAsText(file);
+  return false;
+};
+var previewFile = function(file) {
+  droppable.classList.remove('hovered');
+  var reader = new FileReader();
+  reader.onloadend = function(e) {
+    var image  = new Image();
+    image.onload = function() {
+      var textureImg;
+      var dx, dy, dw, dh;
+      var canvas = document.createElement('CANVAS');
+      var ctx = canvas.getContext("2d");
+      // 2の2乗だったらそのまま
+      if (isPowerOfTwo(image.width) && isPowerOfTwo(image.height)) {
+        textureImg = image;
+        canvas.width = image.width;
+        canvas.height = image.height;
+        dx = 0;
+        dy = 0;
+        dw = image.width;
+        dh = image.height;
+      } else {
+        var width_ratio = 1;
+        var height_ratio = 1;
+        if (image.width < image.height) {
+            width_ratio = image.width / image.height;
+        } else {
+            height_ratio = image.height / image.width;
+        }
+        // 2乗の値に直す
+        canvas.width = Math.pow(2, Math.floor(Math.log2(image.width)));
+        canvas.height = Math.pow(2, Math.floor(Math.log2(image.height)));
+        dx = (canvas.width - (canvas.width * width_ratio)) / 2;
+        dy = (canvas.height - (canvas.height * height_ratio)) / 2;
+        dw = canvas.width * width_ratio;
+        dh = canvas.height * height_ratio;
+      }
+      ctx.drawImage(image, dx, dy, dw, dh);
+      var dataUrl = canvas.toDataURL("image/png");
+      var imgDummy = new Image();
+//      imgDummy.src = dataUrl;
+//      textureImg = imgDummy;
+//      document.body.appendChild(textureImg);
+      addImage('normal', dataUrl)
+    };
+    image.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+var isPowerOfTwo = function(number) {
+   var l = Math.log2(number);
+   return l > 0 && Math.floor(l) === l;
+};
+document.addEventListener("dragenter", function(event) {
+console.log("hoge");
+  droppable.classList.add('hovered');
+  cancelEvent(event);
+}, false);
+document.addEventListener("dragleave", function(event) {
+console.log("hoge2");
+  droppable.classList.remove('hovered');
+}, false);
+document.addEventListener("dragover", cancelEvent.bind(this), false);
+document.addEventListener("drop", handleDroppedFile.bind(this), false);
+</script>
+
+
+
+
+<script type="text/javascript">
+window.addEventListener("load", function () {
+  threeStart();
+});
+
+function threeStart() {
+  initThree();
+  initObject();
+  initCamera();
+  draw();
+}
+
+var renderer,
+    scene,
+    canvasFrame;
+var canvasWidth = window.innerWidth,
+    canvasHeight = window.innerHeight;
+function initThree() {
+  canvasFrame = document.body;
+  renderer = new THREE.WebGLRenderer({antialias: true});
+  if (!renderer) {
+    alert('Three.js の初期化に失敗しました');
+  }
+  renderer.setSize(canvasWidth, canvasHeight);
+  canvasFrame.appendChild(renderer.domElement);
+  renderer.setClearColor(0x000000, 1.0);
+  renderer.shadowMapEnabled = true;
+  scene = new THREE.Scene();
+}
+
+var camera;
+var cameraLookAt = {x: 0, y: 0, z: 0};
+function initCamera() {
+  camera = new THREE.PerspectiveCamera(45, canvasWidth / canvasHeight, 1, 1000);
+//  camera.position.set(30, 30, 60);
+  camera.position.set(0, 0, 100);
+  camera.up = new THREE.Vector3(0, 1, 0);
+//  camera.position.set(50, 50, 100);
+//  camera.up = new THREE.Vector3(0, 0, 1);
+  camera.lookAt(cameraLookAt);
+
+  trackball = new THREE.TrackballControls(camera, canvasFrame);
+  //トラックボール動作範囲のサイズとオフセットの設定
+  trackball.screen.width = canvasFrame.clientWidth;
+  trackball.screen.height = canvasFrame.clientHeight;
+  trackball.screen.offsetLeft = canvasFrame.getBoundingClientRect().left;
+  trackball.screen.offsetTop = canvasFrame.getBoundingClientRect().top;
+  //トラックボールの回転無効化と回転速度の設定
+  trackball.noRotate = false;
+  trackball.rotateSpeed = 2.0;
+  //トラックボールの拡大無効化と拡大速度の設定
+  trackball.noZoom = false;
+  trackball.zoomSpeed = 4.0;
+  //トラックボールのカメラ中心移動の無効化と中心速度の設定
+  trackball.noPan = false;
+  trackball.panSpeed = 1.0;
+  trackball.target = new THREE.Vector3(0, 0, 0);
+  //トラックボールのスタティックムーブの有効化
+  trackball.staticMoving = true;
+  //トラックボールのダイナミックムーブ時の減衰定数
+  trackball.dynamicDampingFactor = 0.3;
+}
+
+var axis;
+var pointLight;
+function initObject() {
+  axis = new THREE.AxisHelper(200);
+  axis.position.set(0, 0, 0)
+  scene.add(axis);
+
+
+  // 点光源オブジェクトの生成
+  pointLight = new THREE.PointLight(0xFFFFFF);
+  pointLight.position.set(0, 0, 60);
+  scene.add(pointLight);
+
+//  //平行光源オブジェクトの生成
+//  directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.0, 0);
+//  //平行光源オブジェクトの位置の設定
+//  directionalLight.position.set(150, 0, -50);
+//  //平行光源オブジェクトのシーンへの追加
+//  scene.add(directionalLight);
+//
+//  //環境光オブジェクトの生成
+//  ambientLight = new THREE.AmbientLight(0x222222);
+//  //環境光オブジェクトのシーンへの追加
+//  scene.add(ambientLight);
+
+  addImage();
+//  drawObj();
+
+//  lighthelper = new THREE.PointLightHelper(pointLight, 5);
+//  scene.add(lighthelper);
+}
+
+step = 0;
+function anim() {
+  step = step + 1;
+  var cameraX = 50;
+  var cameraY = 50;
+  var cameraZ = 100;
+  var cameraX = 100 * Math.cos(step / 100);
+//  var cameraY = 100 * Math.sin(step / 100);
+//  var cameraZ = 100 * Math.cos(step / 100);
+  camera.position.set(cameraX, cameraY, cameraZ);
+  camera.up.set(0, 1, 0);
+  camera.lookAt({x: 0, y: 0, z: 0});
+}
+
+function draw() {
+  trackball.update();
+//  anim();
+  renderer.render(scene, camera);
+  window.requestAnimationFrame(draw);
+}
+
+function drawPlane() {
+    // add image
+    addImage();
+    
+    // plane
+    //addPlane(scene);
+    
+    // box particle
+    //addBoxParticle(scene);
+    
+    // particle
+    //addParticle(scene);
+}
+
+var gjsonFile = "model/Lucy100k_slim.js";
+function drawObj(jsonFile) {
+  if (plane) {
+    scene.remove(plane);
+  }
+  if (jsonFile) {
+    gjsonFile = jsonFile;
+  }
+  jsonFile = gjsonFile;
+  //ローダーオブジェクト
+  var loader = new THREE.JSONLoader(false);
+  //データロードを実行
+  loader.load(jsonFile, 
+    function(geometry) {
+      //材質オブジェクトの宣言と生成
+      var options = {};
+      var material = new THREE.MeshPhongMaterial(options);
+      //ルーシーさんオブジェクトの生成
+      plane = new THREE.Mesh(geometry, material);
+      //スケールの指定
+      plane.scale.set(0.05, 0.05, 0.05);
+      //ルーシーさんオブジェクトのシーンへの追加
+      scene.add(plane);
+    }
+  );
+}
+
+
+function addParticle(scene) {
+  // 点
+  geometry = new THREE.Geometry();
+  for ( i = 0; i < 50000; i ++ ) {
+    var vertex = new THREE.Vector3();
+    vertex.x = Math.random() * 200 - 100;
+    vertex.y = Math.random() * 200 - 100;
+    vertex.z = Math.random() * 200 - 100;
+    geometry.vertices.push(vertex);
+    var r = (Math.abs(vertex.x) / (100 / 2));
+    var g = (Math.abs(vertex.y) / (100 / 2));
+    var b = (Math.abs(vertex.z) / (100 / 2));
+    var color = new THREE.Color().setRGB(r, g, b);
+    geometry.colors.push(color);
+  }
+  material = new THREE.PointCloudMaterial({
+    size: 1,
+    vertexColors: true,
+  });
+  particles = new THREE.PointCloud(geometry, material);
+  particles.rotation.x = Math.random() * 5
+  particles.rotation.y = Math.random() * 5;
+  particles.rotation.z = Math.random() * 5;
+  scene.add(particles);
+}
+
+function addBoxParticle(scene) {
+  // box particle
+  geometry = new THREE.BufferGeometry();
+  var n = 10000;
+  var colors = new Float32Array(n * 3);
+  var positions = new Float32Array(n * 3);
+  
+  var l = 50;
+  for (var i = 0; i < (n * 3); i += 3) {
+    var x = l * Math.random() - l / 2;
+    var y = l * Math.random() - l / 2;
+    var z = l * Math.random() - l / 2;
+    positions[i] = x;
+    positions[i + 1] = y;
+    positions[i + 2] = z;
+    var r = (Math.abs(x) / (l / 2));
+    var g = (Math.abs(y) / (l / 2));
+    var b = (Math.abs(z) / (l / 2));
+    var color = new THREE.Color().setRGB(r, g, b);
+    colors[i] = color.r;
+    colors[i + 1] = color.g;
+    colors[i + 2] = color.b;
+  }
+  // attributesを追加
+  geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
+  
+  var material = new THREE.PointCloudMaterial({
+    size: 1.0,
+    vertexColors: true,
+  });
+  particleSystem = new THREE.PointCloud(geometry, material);
+  particleSystem.sortParticles = true;
+  scene.add(particleSystem);
+}
+
+// plane
+function addPlane(scene) {
+  // Plane
+  var geometry = new THREE.BufferGeometry();
+  var vertexPositions = [
+      [-50.0, -50.0, 1.0], // a
+      [ 50.0, -50.0, 1.0], // b
+      [ 50.0,  50.0, 1.0], // c
+      [-50.0,  50.0, 1.0]  // d
+  ];
+  // Typed Arrayで頂点データを保持
+  var vertices = new Float32Array(vertexPositions.length * 3);
+  var colors = new Float32Array(vertexPositions.length * 3);
+  for (var i = 0; i < vertexPositions.length; i++) {
+      vertices[i * 3 + 0] = vertexPositions[i][0];
+      vertices[i * 3 + 1] = vertexPositions[i][1];
+      vertices[i * 3 + 2] = vertexPositions[i][2];
+      colors[i * 3 + 0] = 0.8;
+      colors[i * 3 + 1] = 0.0;
+      colors[i * 3 + 2] = 0.8;
+  }
+  // 頂点インデックスを生成
+  var indices = new Uint16Array([
+      0, 1, 2,
+      2, 3, 0
+  ]);
+  // attributesを追加
+  geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geometry.addAttribute('index', new THREE.BufferAttribute(indices, 1));
+  geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
+  var material = new THREE.PointCloudMaterial({
+    size: 1.1,
+    vertexColors: true,
+  });
+  material.side = THREE.DoubleSide;
+  var mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+}
+
+var plane;
+var gsrc = 'img/sample2.jpg';
+var geometry;
+function addImage(mappingType, src) {
+  if (plane) {
+    scene.remove(plane);
+  }
+
+  if (src) {
+    gsrc = src;
+  }
+  src = gsrc;
+  var geometry = new THREE.PlaneGeometry(100, 100);
+//  var texture = THREE.ImageUtils.loadTexture('img/doronpa256.png');
+//  var texture = THREE.ImageUtils.loadTexture('img/simyu-kun256.png');
+//  var texture = THREE.ImageUtils.loadTexture('img/sample1.png');
+//  var texture = THREE.ImageUtils.loadTexture('img/sample2.jpg');
+  var texture = THREE.ImageUtils.loadTexture(src);
+  var normalScalVec2 = new THREE.Vector2(0, 1);
+
+  var options = {};
+  options.shading = THREE.FlatShading;
+  if ("normal" === mappingType) {
+    // 法線マッピング
+    options.normalMap = texture;
+    options.normalScale = normalScalVec2;
+  } else if ("specular" === mappingType) {
+    // 鏡面マッピング
+    options.specularMap = texture;
+    options.color = 0x000000;
+    options.specular = 0xffffff;
+    options.shininess = 20;
+  } else if ("bump" === mappingType) {
+    // バンプマッピング
+    options.map = texture;
+    options.bumpMap = texture;
+    options.bumpScale = 4;
+    options.specular = 0xffffff;
+    options.shininess = 1000;
+  } else if ("light" === mappingType) {
+    // ライトマッピング
+    options.lightMap = texture;
+    options.color = 0xffffff;
+    options.specular = 0xffffff;
+    options.shininess = 200;
+    geometry.faceVertexUvs[1] = geometry.faceVertexUvs[0];
+  } else {
+    // 通常..
+    options.map = texture;
+  }
+
+  var material = new THREE.MeshPhongMaterial(options);// 背面なし？
+//  var material = new THREE.MeshLambertMaterial(options);// 背面なし？
+//  var material = new THREE.MeshBasicMaterial(options);// 背面あり
+//  material.side = THREE.DoubleSide;
+  plane = new THREE.Mesh(geometry, material);
+  scene.add(plane);
+}
+
+function addParticleHoge() {
+//// 粒子数
+//var numParticles = 147350;
+//// 粒子の大きさ
+//var pointSize = 5.0;
+//// 粒子のばらばら具合
+//var timeScale = 0.00;
+//// 粒子の白さ
+//var colorScale = 0.00;
+//image = document.createElement("IMG");
+//image.src = gsrc;
+//image.onload = function() {
+//  ct = document.createElement("CANVAS");
+//  ct.width = image.width;
+//  ct.height = image.height;
+//  tx = ct.getContext("2d");
+//  tx.drawImage(image, 0, 0, image.width, image.height);
+//  imageArr = tx.getImageData(0, 0, image.width, image.height).data;
+//  var radius = 10;
+//  var imageWidth = image.width;
+//  var imageHeight = image.height;
+//  var numPixels = imageWidth * imageHeight;
+//  numParticles = numPixels;
+//  var rate = Math.sqrt(numPixels / numParticles);
+//  var posScale = (imageHeight / 2) * rate;
+//  var r, g, b, x0, y0, z0, x1, y1, z1;
+//  var vColor = [];
+//  var vPosition0 = [];
+//  var vPosition1 = [];
+//  for (var i = 0; i < numParticles; i++) {
+//    var p = i;
+//    var cIndex = p * 3;
+//    var imageindexX = (rate * i % imageWidth) >> 0;
+//    var imageindexY = imageHeight - rate * (rate * i / imageWidth >> 0) >> 0;
+//    var pixIndex = (imageindexX + imageWidth * imageindexY) >> 0;
+//    r = imageArr[pixIndex * 4] / 255;
+//    g = imageArr[pixIndex * 4 + 1] / 255;
+//    b = imageArr[pixIndex * 4 + 2] / 255;
+//    vColor[cIndex] = r;
+//    vColor[cIndex + 1] = g;
+//    vColor[cIndex + 2] = b;
+//  
+//    var pIndex = p * 3;
+//    //並べられた位置(状態0)
+//    x0 = (rate * i % imageWidth) - imageWidth / 2;
+//    y0 = rate * (rate * i / imageWidth >> 0) - imageHeight / 2;
+//    z0 = 0;
+//    x0 /= posScale;
+//    y0 /= posScale;
+//    vPosition0[pIndex] = x0;
+//    vPosition0[pIndex + 1] = y0;
+//    vPosition0[pIndex + 2] = z0;
+//  
+//    //ランダムな位置(状態1)
+//    x1 = (-0.5 + Math.random()) * radius;
+//    y1 = (-0.5 + Math.random()) * radius;
+//    z1 = (-0.5 + Math.random()) * radius;
+//    vPosition1[pIndex] = x1;
+//    vPosition1[pIndex + 1] = y1;
+//    vPosition1[pIndex + 2] = z1;
+//  }
+//  
+//  var material = new THREE.ShaderMaterial({
+//    fragmentShader: document.getElementById('fs-p').innerHTML,
+//    vertexShader  : document.getElementById('vs-p').innerHTML,
+//    attributes: {
+//      position0: {type: 'v3', value: vPosition0},
+//      position1: {type: 'v3', value: vPosition1},
+//      color:     {type: 'v3', value: vColor},
+//    },
+//    uniforms: {
+//      pointSize:  {type: 'f', value: pointSize},
+//      timeScale:  {type: 'f', value: timeScale},
+//      colorScale: {type: 'f', value: colorScale},
+//    }
+//  });
+//  
+//    plane = new THREE.Mesh(geometry, material);
+//    scene.add(plane);
+//};
+}
+</script>
+
+
+
+</body>
+</html>

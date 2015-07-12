@@ -1,0 +1,298 @@
+<!DOCTYPE HTML>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>threejsテスト</title>
+    <script type="text/javascript" src="../bower_components/threejs/build/three.js"></script>
+    <script type="text/javascript" src="../bower_components/threejs/examples/js/controls/TrackballControls.js"></script>
+
+<style type="text/css">
+html, body, p, h1, h2, h3, h4, h5, h6, figure {
+padding: 0;
+margin: 0;
+}
+html, body, canvas {
+width: 100%;
+height: 100%;
+}
+body {
+overflow: hidden;
+}
+</style>
+</head>
+<body>
+
+<script type="text/javascript">
+window.addEventListener("load", function () {
+  threeStart();
+});
+
+function threeStart() {
+  initThree();
+  initObject();
+  initCamera();
+  draw();
+}
+
+var renderer,
+    scene,
+    canvasFrame;
+var canvasWidth = window.innerWidth,
+    canvasHeight = window.innerHeight;
+function initThree() {
+  canvasFrame = document.body;
+  renderer = new THREE.WebGLRenderer({antialias: true});
+  if (!renderer) {
+    alert('Three.js の初期化に失敗しました');
+  }
+  renderer.setSize(canvasWidth, canvasHeight);
+  canvasFrame.appendChild(renderer.domElement);
+  renderer.setClearColor(0x000000, 1.0);
+  renderer.shadowMapEnabled = true;
+  scene = new THREE.Scene();
+}
+
+var camera;
+var cameraLookAt = {x: 0, y: 0, z: 0};
+function initCamera() {
+  camera = new THREE.PerspectiveCamera(45, canvasWidth / canvasHeight, 1, 1000);
+//  camera.position.set(30, 30, 60);
+  camera.position.set(0, 0, 100);
+  camera.up = new THREE.Vector3(0, 1, 0);
+//  camera.position.set(50, 50, 100);
+//  camera.up = new THREE.Vector3(0, 0, 1);
+  camera.lookAt(cameraLookAt);
+
+  trackball = new THREE.TrackballControls(camera, canvasFrame);
+  //トラックボール動作範囲のサイズとオフセットの設定
+  trackball.screen.width = canvasFrame.clientWidth;
+  trackball.screen.height = canvasFrame.clientHeight;
+  trackball.screen.offsetLeft = canvasFrame.getBoundingClientRect().left;
+  trackball.screen.offsetTop = canvasFrame.getBoundingClientRect().top;
+  //トラックボールの回転無効化と回転速度の設定
+  trackball.noRotate = false;
+  trackball.rotateSpeed = 2.0;
+  //トラックボールの拡大無効化と拡大速度の設定
+  trackball.noZoom = false;
+  trackball.zoomSpeed = 4.0;
+  //トラックボールのカメラ中心移動の無効化と中心速度の設定
+  trackball.noPan = false;
+  trackball.panSpeed = 1.0;
+  trackball.target = new THREE.Vector3(0, 0, 0);
+  //トラックボールのスタティックムーブの有効化
+  trackball.staticMoving = true;
+  //トラックボールのダイナミックムーブ時の減衰定数
+  trackball.dynamicDampingFactor = 0.3;
+}
+
+var axis;
+var pointLight;
+function initObject() {
+  axis = new THREE.AxisHelper(200);
+  axis.position.set(0, 0, 0)
+  scene.add(axis);
+
+
+//  addImage();
+//  addImage('bump');
+//  addImage('normal');
+//  addImage('specular');
+  addImage('light');
+
+  // 点光源オブジェクトの生成
+  pointLight = new THREE.PointLight(0xFFFFFF);
+  pointLight.position.set(0, 0, 60);
+  scene.add(pointLight);
+
+//  //平行光源オブジェクトの生成
+//  directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.0, 0);
+//  //平行光源オブジェクトの位置の設定
+//  directionalLight.position.set(150, 0, -50);
+//  //平行光源オブジェクトのシーンへの追加
+//  scene.add(directionalLight);
+//
+//  //環境光オブジェクトの生成
+//  ambientLight = new THREE.AmbientLight(0x222222);
+//  //環境光オブジェクトのシーンへの追加
+//  scene.add(ambientLight);
+
+//  lighthelper = new THREE.PointLightHelper(pointLight, 5);
+//  scene.add(lighthelper);
+}
+
+step = 0;
+function anim() {
+  step = step + 1;
+  var cameraX = 50;
+  var cameraY = 50;
+  var cameraZ = 100;
+  var cameraX = 100 * Math.cos(step / 100);
+//  var cameraY = 100 * Math.sin(step / 100);
+//  var cameraZ = 100 * Math.cos(step / 100);
+  camera.position.set(cameraX, cameraY, cameraZ);
+  camera.up.set(0, 1, 0);
+  camera.lookAt({x: 0, y: 0, z: 0});
+}
+
+function draw() {
+  trackball.update();
+//  anim();
+  renderer.render(scene, camera);
+  window.requestAnimationFrame(draw);
+}
+
+
+function addParticle(scene) {
+  // 点
+  geometry = new THREE.Geometry();
+  for ( i = 0; i < 50000; i ++ ) {
+    var vertex = new THREE.Vector3();
+    vertex.x = Math.random() * 200 - 100;
+    vertex.y = Math.random() * 200 - 100;
+    vertex.z = Math.random() * 200 - 100;
+    geometry.vertices.push(vertex);
+    var r = (Math.abs(vertex.x) / (100 / 2));
+    var g = (Math.abs(vertex.y) / (100 / 2));
+    var b = (Math.abs(vertex.z) / (100 / 2));
+    var color = new THREE.Color().setRGB(r, g, b);
+    geometry.colors.push(color);
+  }
+  material = new THREE.PointCloudMaterial({
+    size: 1,
+    vertexColors: true,
+  });
+  particles = new THREE.PointCloud(geometry, material);
+  particles.rotation.x = Math.random() * 5
+  particles.rotation.y = Math.random() * 5;
+  particles.rotation.z = Math.random() * 5;
+  scene.add(particles);
+}
+
+function addBoxParticle(scene) {
+  // box particle
+  geometry = new THREE.BufferGeometry();
+  var n = 10000;
+  var colors = new Float32Array(n * 3);
+  var positions = new Float32Array(n * 3);
+  
+  var l = 50;
+  for (var i = 0; i < (n * 3); i += 3) {
+    var x = l * Math.random() - l / 2;
+    var y = l * Math.random() - l / 2;
+    var z = l * Math.random() - l / 2;
+    positions[i] = x;
+    positions[i + 1] = y;
+    positions[i + 2] = z;
+    var r = (Math.abs(x) / (l / 2));
+    var g = (Math.abs(y) / (l / 2));
+    var b = (Math.abs(z) / (l / 2));
+    var color = new THREE.Color().setRGB(r, g, b);
+    colors[i] = color.r;
+    colors[i + 1] = color.g;
+    colors[i + 2] = color.b;
+  }
+  // attributesを追加
+  geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
+  
+  var material = new THREE.PointCloudMaterial({
+    size: 1.0,
+    vertexColors: true,
+  });
+  particleSystem = new THREE.PointCloud(geometry, material);
+  particleSystem.sortParticles = true;
+  scene.add(particleSystem);
+}
+
+// plane
+function addPlane(scene) {
+  // Plane
+  var geometry = new THREE.BufferGeometry();
+  var vertexPositions = [
+      [-50.0, -50.0, 1.0], // a
+      [ 50.0, -50.0, 1.0], // b
+      [ 50.0,  50.0, 1.0], // c
+      [-50.0,  50.0, 1.0]  // d
+  ];
+  // Typed Arrayで頂点データを保持
+  var vertices = new Float32Array(vertexPositions.length * 3);
+  var colors = new Float32Array(vertexPositions.length * 3);
+  for (var i = 0; i < vertexPositions.length; i++) {
+      vertices[i * 3 + 0] = vertexPositions[i][0];
+      vertices[i * 3 + 1] = vertexPositions[i][1];
+      vertices[i * 3 + 2] = vertexPositions[i][2];
+      colors[i * 3 + 0] = 0.8;
+      colors[i * 3 + 1] = 0.0;
+      colors[i * 3 + 2] = 0.8;
+  }
+  // 頂点インデックスを生成
+  var indices = new Uint16Array([
+      0, 1, 2,
+      2, 3, 0
+  ]);
+  // attributesを追加
+  geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geometry.addAttribute('index', new THREE.BufferAttribute(indices, 1));
+  geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
+  var material = new THREE.PointCloudMaterial({
+    size: 1.1,
+    vertexColors: true,
+  });
+  material.side = THREE.DoubleSide;
+  var mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+}
+
+var plane;
+var geometry;
+function addImage(mappingType, src) {
+  if (plane) {
+    scene.remove(plane);
+  }
+
+  var geometry = new THREE.PlaneGeometry(100, 100);
+  var texture = THREE.ImageUtils.loadTexture('../img/doronpa256.png');
+  var normalScalVec2 = new THREE.Vector2(0, 1);
+
+  var options = {};
+  options.shading = THREE.FlatShading;
+  if ("normal" === mappingType) {
+    // 法線マッピング
+    options.normalMap = texture;
+    options.normalScale = normalScalVec2;
+  } else if ("specular" === mappingType) {
+    // 鏡面マッピング
+    options.specularMap = texture;
+    options.color = 0x000000;
+    options.specular = 0xffffff;
+    options.shininess = 20;
+  } else if ("bump" === mappingType) {
+    // バンプマッピング
+    options.map = texture;
+    options.bumpMap = texture;
+    options.bumpScale = 4;
+    options.specular = 0xffffff;
+    options.shininess = 1000;
+  } else if ("light" === mappingType) {
+    // ライトマッピング
+    options.lightMap = texture;
+    options.color = 0xffffff;
+    options.specular = 0xffffff;
+    options.shininess = 200;
+    geometry.faceVertexUvs[1] = geometry.faceVertexUvs[0];
+  } else {
+    // 通常..
+    options.map = texture;
+  }
+
+  var material = new THREE.MeshPhongMaterial(options);
+  plane = new THREE.Mesh(geometry, material);
+  scene.add(plane);
+}
+
+</script>
+
+
+
+</body>
+</html>
